@@ -1,0 +1,107 @@
+---
+- name: Install docker
+  hosts: vaultwarden
+  tasks:
+    - name: Updating apt cache to make sure there are no issues
+      ansible.builtin.apt:
+        update_cache: true
+    - name: Make sure that dependencies for the apt repository modules are installed
+      ansible.builtin.apt:
+        name: [python3-apt, gpg]
+    - name: Add docker repository key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+    - name: Adding docker apt repository
+      ansible.builtin.apt_repository:
+        mode: 0644
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+    - name: Installing official docker package
+      ansible.builtin.apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+
+- name: Installing venv with PyYAML
+  hosts: vaultwarden
+  tasks:
+    - name: Make sure /data/venv directory exists
+      ansible.builtin.file:
+        state: directory
+        path: /data/venv
+    - name: Installing pip and venv on docker host
+      ansible.builtin.apt:
+        name: [python3-pip, python3-venv]
+    - name: Create virtual env for pyYAML
+      ansible.builtin.command:
+        cmd: python3 -m venv /data/venv
+    - name: Installing pyYAML
+      ansible.builtin.pip:
+        name: PyYAML
+        virtualenv: /data/venv
+
+
+- name: Installing vaultwarden
+  hosts: vaultwarden
+  tasks:
+    - name: Ensuring vaultwarden is installed
+      community.docker.docker_compose_v2:
+        project_name: vaultwarden
+        definition:
+          services:
+            vaultwarden:
+              image: vaultwarden/server:latest
+              volumes: [/data/vw-data/:/data/]
+              ports: [80:80]
+              environment:
+                ADMIN_TOKEN: test
+      vars: 
+        ansible_python_interpreter: /data/venv/bin/python
+
+- name: Installing reverse-proxy
+  hosts: vaultwarden
+  tasks:
+    - name: Ensure /data/files exists
+      ansible.builtin.file:
+        path: /data/files
+        state: directory
+    - name: Copy nginx config to docker host
+      ansible.builtin.copy:
+        src: ./files/nginx.conf
+        dest: /data/files/nginx.conf
+      register: ansible_builtin_copy_result
+    - name: Copy private certificate key to docker host
+      ansible.builtin.copy:
+        src: ./files/private-certificate-key.pem
+        dest: /data/files/private-certificate-key.pem
+    - name: Copy public certificate key to docker host
+      ansible.builtin.copy:
+        src: ./files/public-certificate-key.pem
+        dest: /data/files/public-certificate-key.pem
+    - name: Create reverse-proxy container if it does not exist yet
+      community.docker.docker_compose_v2:
+        project_name: reverse_proxy
+        definition:
+          services:
+            reverse-proxy:
+              image: nginx
+              ports: [443:443]
+              volumes: 
+                - /data/files/nginx.conf:/etc/nginx/nginx.conf
+                - /data/files/private-certificate-key.pem:/etc/nginx/private-certificate-key.pem
+                - /data/files/public-certificate-key.pem:/etc/nginx/public-certificate-key.pem
+      vars:
+        ansible_python_interpreter: /data/venv/bin/python
+    - name: If the nginx config changes reload nginx
+      when: ansible_builtin_copy_result['changed'] == true
+      community.docker.docker_container_exec:
+        container: reverse_proxy-reverse-proxy-1
+        command: nginx -s reload
+
+- name: Creating network
+  hosts: vaultwarden
+  tasks:
+    - name: Creating network
+      docker_network:
+        name: main
+        connected:
+          - vaultwarden-vaultwarden-1
+          - reverse_proxy-reverse-proxy-1

@@ -1,0 +1,2 @@
+#!/bin/sh
+openssl req -newkey rsa:4096 -x509 -sha512 -days 365 -nodes -out files/public-certificate-key.pem -keyout files/private-certificate-key.pem
