@@ -51,8 +51,6 @@
               image: vaultwarden/server:latest
               volumes: [/data/vw-data/:/data/]
               ports: [80:80]
-              environment:
-                ADMIN_TOKEN: test
       vars: 
         ansible_python_interpreter: /data/venv/bin/python
 
