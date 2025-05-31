@@ -1,24 +1,8 @@
 ---
 - name: Install docker
   hosts: vaultwarden
-  tasks:
-    - name: Updating apt cache to make sure there are no issues
-      ansible.builtin.apt:
-        update_cache: true
-    - name: Make sure that dependencies for the apt repository modules are installed
-      ansible.builtin.apt:
-        name: [python3-apt, gpg]
-    - name: Add docker repository key
-      ansible.builtin.get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.asc
-    - name: Adding docker apt repository
-      ansible.builtin.apt_repository:
-        mode: 0644
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-    - name: Installing official docker package
-      ansible.builtin.apt:
-        name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+  roles:
+    - install-docker
 
 - name: Installing venv with PyYAML
   hosts: vaultwarden
