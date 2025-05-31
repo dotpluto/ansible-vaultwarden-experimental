@@ -1,2 +1,3 @@
 /files/private-certificate-key.pem
 /files/public-certificate-key.pem
+*.swp
