@@ -105,3 +105,9 @@
         connected:
           - vaultwarden-vaultwarden-1
           - reverse_proxy-reverse-proxy-1
+      register: network_creation_result
+    - name: Reloading nginx if the network didn't exit yet.
+      when: network_creation_result['changed'] == true
+      community.docker.docker_container_exec:
+        container: reverse_proxy-reverse-proxy-1
+        command: nginx -s reload
