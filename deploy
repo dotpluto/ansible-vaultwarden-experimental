@@ -19,4 +19,4 @@ ssh $1 "rm -rf ansible-data"
 echo Copying new data
 scp -r ./ansible-data ansible-control-node:/root/ansible-data
 echo Running playbook
-ssh $1 "cd ansible-data; ansible-playbook playbook.yaml"
+ssh $1 "cd ansible-data; ansible-playbook -i inventory.yaml playbook.yaml"

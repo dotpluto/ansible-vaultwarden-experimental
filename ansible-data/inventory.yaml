@@ -1,0 +1,6 @@
+---
+all:
+  hosts:
+    vaultwarden:
+        ansible_host: 192.168.26.2
+        ansible_python_interpreter: /usr/bin/python3
