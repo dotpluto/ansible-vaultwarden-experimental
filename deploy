@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+print_help() {
+    echo "Usage: deploy <control-node-ssh-hostname> [<custom-ansible-data-dir-on-host>]"
+}
+
+if [ -z $1 ]; then
+    print_help
+    exit
+fi
+
+if [ $1 == "help" ]; then
+    print_help
+fi
+
+$DIR
+
+echo Removing old data
+ssh $1 "rm -rf ansible-data"
+echo Copying new data
+scp -r ./ansible-data ansible-control-node:/root/ansible-data
+echo Running playbook
+ssh $1 "cd ansible-data; ansible-playbook playbook.yaml"
